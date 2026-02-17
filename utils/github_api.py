@@ -63,7 +63,63 @@ def calculate_streaks(contributions):
         "total_contributions": total_contributions
     }
 
+def get_top_repositories(username, sort_by="stars", limit=5):
+    """
+    Fetches top repositories for a user sorted by specified criteria.
+    
+    Args:
+        username: GitHub username
+        sort_by: Sort criteria - "stars", "forks", or "updated"
+        limit: Number of repos to return (3, 5, or 10)
+    
+    Returns:
+        List of dicts with repo data: name, description, language, stars, forks, updated_at
+    """
+    try:
+        # Map sort criteria to GitHub API sort parameter
+        sort_param = sort_by if sort_by in ["stars", "forks", "updated"] else "stars"
+        
+        # Fetch repos sorted by the criteria (GitHub API supports sorting)
+        repos_url = f"https://api.github.com/users/{username}/repos?per_page=100&type=owner&sort={sort_param}&direction=desc"
+        repos_resp = requests.get(repos_url)
+        
+        if repos_resp.status_code != 200:
+            return []
+        
+        repos_data = repos_resp.json()
+        
+        # Sort manually if needed (GitHub API sort might not work perfectly for all cases)
+        if sort_param == "stars":
+            repos_data.sort(key=lambda x: x.get("stargazers_count", 0), reverse=True)
+        elif sort_param == "forks":
+            repos_data.sort(key=lambda x: x.get("forks_count", 0), reverse=True)
+        elif sort_param == "updated":
+            repos_data.sort(key=lambda x: x.get("updated_at", ""), reverse=True)
+        
+        # Limit results
+        top_repos = repos_data[:limit]
+        
+        # Extract relevant data
+        result = []
+        for repo in top_repos:
+            result.append({
+                "name": repo.get("name", "Unknown"),
+                "description": repo.get("description", "") or "No description",
+                "language": repo.get("language", "Unknown") or "Unknown",
+                "stars": repo.get("stargazers_count", 0),
+                "forks": repo.get("forks_count", 0),
+                "updated_at": repo.get("updated_at", ""),
+                "html_url": repo.get("html_url", "")
+            })
+        
+        return result
+        
+    except Exception as e:
+        print(f"Error fetching top repos: {e}")
+        return []
+
 def get_live_github_data(username):
+
 
     """
     Fetches real data from GitHub API. 
