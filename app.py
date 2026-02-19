@@ -1,9 +1,10 @@
 import streamlit as st  # type: ignore
 import base64
 import os
+import streamlit.components.v1 as components
 from dotenv import load_dotenv
 from roast_widget_streamlit import render_roast_widget
-from generators import stats_card, lang_card, contrib_card, badge_generator, recent_activity_card
+from generators import stats_card, lang_card, contrib_card, badge_generator, recent_activity_card, streak_card
 from utils import github_api
 from themes.styles import THEMES
 from generators.visual_elements import (
@@ -17,7 +18,7 @@ if "canvas" not in st.session_state:
     st.session_state["canvas"] = []
 
 for item in st.session_state["canvas"]:
-    st.markdown(item, unsafe_allow_html=True)
+    components.html(item, height=150)
 
 # Load environment variables
 load_dotenv()
@@ -111,7 +112,7 @@ if custom_colors:
     current_theme_opts.update(custom_colors)
 
 # --- Layout: Tabs ---
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["Main Stats", "Languages", "Contributions", "Icons & Badges", "🔥 AI Roast", "Recent Activity", "✨ Visual Elements"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(["Main Stats", "Languages", "Contributions", "🔥 GitHub Streak", "Icons & Badges", "🔥 AI Roast", "Recent Activity", "✨ Visual Elements"])
 
 def show_code_area(code_content, label="Markdown Code"):
     st.markdown(f"**{label}** (Copy below)")
@@ -238,33 +239,6 @@ with tab4:
     render_tab(svg_bytes, "streak", username, selected_theme, custom_colors, code_template="![GitHub Streak]({url})")
 
 with tab5:
-    st.subheader("Top Repositories")
-    st.caption("⭐ Showcase your best work! Display your most popular repositories.")
-    
-    # Controls
-    col_sort, col_limit = st.columns(2)
-    with col_sort:
-        sort_by = st.selectbox("Sort by", ["stars", "forks", "updated"], index=0, 
-                               format_func=lambda x: {"stars": "⭐ Stars", "forks": "🍴 Forks", "updated": "🕐 Recently Updated"}[x])
-    with col_limit:
-        limit = st.selectbox("Number of repos", [3, 5, 10], index=1)
-    
-    # Fetch top repos data
-    from utils.github_api import get_top_repositories
-    top_repos = get_top_repositories(username, sort_by=sort_by, limit=limit)
-    
-    # Update data dict with repos
-    repo_data = data.copy()
-    repo_data["top_repos"] = top_repos
-    
-    # Render card
-    svg_bytes = repo_card.draw_repo_card(repo_data, selected_theme, custom_colors, sort_by=sort_by, limit=limit)
-    render_tab(svg_bytes, "repos", username, selected_theme, custom_colors, 
-               code_template=f"[![Top Repos]({{url}})](https://github.com/{username})")
-
-with tab6:
-
-
     st.subheader("Tech Stack Badges")
     st.markdown("Click detailed settings to customize. Copy the code block to your README.")
     
@@ -333,8 +307,8 @@ with tab6:
             st.markdown("---")
             show_code_area(md_output, label="Badge Code")
 
-# NEW TAB 5: AI ROAST
-with tab7:
+# NEW TAB 6: AI ROAST
+with tab6:
     st.subheader("🔥 AI Profile Roast")
 
     st.markdown("Let AI roast your GitHub profile with humor!")
@@ -344,7 +318,7 @@ with tab7:
     else:
         st.warning("Please enter a GitHub username in the sidebar.")
 
-with tab6:
+with tab7:
     st.subheader("Recent Activity")
     st.markdown("Shows your last 3 PR or Issue events from GitHub.")
 
@@ -377,7 +351,7 @@ with tab6:
         code = f"![Recent Activity]({url})"
         show_code_area(code)
 
-with tab7:
+with tab8:
     st.subheader("✨ Visual Elements")
     st.markdown("Add emojis, GIFs, or stickers to your canvas")
 
