@@ -60,6 +60,16 @@ THEMES = {
     "font_family": "'Consolas', 'Lucida Console', monospace",
     "title_font_size": 19,
     "text_font_size": 14
+    },
+    "Pacman": {
+        "bg_color": "#000000",
+        "border_color": "#1919a6",
+        "title_color": "#ffff00",
+        "text_color": "#ffffff",
+        "icon_color": "#ff8c00",
+        "font_family": "'Courier New', Courier, monospace",
+        "title_font_size": 18,
+        "text_font_size": 14
     }
 }
 import json
