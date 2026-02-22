@@ -87,10 +87,11 @@ with st.sidebar:
         # Helper to get color safely
         def get_col(key): return default_theme.get(key, "#000000")
         
-        custom_bg = st.color_picker("Background", value=get_col("bg_color"), key="customize_bg")
-        custom_title = st.color_picker("Title Text", value=get_col("title_color"), key="customize_title")
-        custom_text = st.color_picker("Body Text", value=get_col("text_color"), key="customize_text")
-        custom_border = st.color_picker("Border", value=get_col("border_color"), key="customize_border")
+        # Use theme-specific keys so each theme maintains its own customization
+        custom_bg = st.color_picker("Background", value=get_col("bg_color"), key=f"customize_bg_{selected_theme}")
+        custom_title = st.color_picker("Title Text", value=get_col("title_color"), key=f"customize_title_{selected_theme}")
+        custom_text = st.color_picker("Body Text", value=get_col("text_color"), key=f"customize_text_{selected_theme}")
+        custom_border = st.color_picker("Border", value=get_col("border_color"), key=f"customize_border_{selected_theme}")
         
         # Build custom colors dict if changed
         custom_colors = {}
