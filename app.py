@@ -228,15 +228,22 @@ with tab3:
     st.subheader("Top Repositories")
     
     # Sorting options
-    col1, col2 = st.columns([1, 1])
+    col1, col2, col3 = st.columns([1, 1, 1])
     with col1:
         sort_by = st.selectbox("Sort by:", ["stars", "forks", "updated"], index=0, 
                               format_func=lambda x: {"stars": "⭐ Most Starred", "forks": "🔱 Most Forked", "updated": "🕐 Recently Updated"}[x])
     with col2:
         repo_limit = st.slider("Number of repos:", min_value=3, max_value=10, value=5)
+    with col3:
+        exclude_forks = st.checkbox("Exclude forks", value=False, help="Hide forked repositories")
+    
+    # Filter data based on user preference
+    filtered_data = data.copy()
+    if exclude_forks and "top_repos" in filtered_data:
+        filtered_data["top_repos"] = [r for r in filtered_data["top_repos"] if not r.get("is_fork", False)]
     
     # Generate card - Pass selected_theme string
-    svg_bytes = repo_card.draw_repo_card(data, selected_theme, custom_colors, sort_by=sort_by, limit=repo_limit)
+    svg_bytes = repo_card.draw_repo_card(filtered_data, selected_theme, custom_colors, sort_by=sort_by, limit=repo_limit)
     render_tab(svg_bytes, "repos", username, selected_theme, custom_colors, code_template="![Top Repos]({url})")
 
 with tab4:

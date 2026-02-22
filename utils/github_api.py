@@ -123,36 +123,44 @@ def get_live_github_data(username, token=None):
         repos_resp = requests.get(repos_url, headers=headers)
         repos_data = repos_resp.json() if repos_resp.status_code == 200 else []
         
-        # Filter out forks if user wants only their own repos (but keep all by default)
-        if isinstance(repos_data, list):
-            repos_data = [repo for repo in repos_data if not repo.get("fork", False)]
-        else:
+        # Validate response is a list
+        if not isinstance(repos_data, list):
             # API returned an error dict instead of list
             print(f"Repos API Error: {repos_data}")
             repos_data = []
         
-        total_stars = sum(repo.get("stargazers_count", 0) for repo in repos_data)
+        # Store all repos including forks for frontend (let user decide)
+        all_repos = repos_data.copy()
         
-        # Languages (Approximation from top repos)
+        # For stats calculation, filter out forks
+        repos_data_no_forks = [repo for repo in repos_data if not repo.get("fork", False)]
+        
+        # For stats calculation, filter out forks
+        repos_data_no_forks = [repo for repo in repos_data if not repo.get("fork", False)]
+        
+        total_stars = sum(repo.get("stargazers_count", 0) for repo in repos_data_no_forks)
+        
+        # Languages (Approximation from top repos, excluding forks)
         languages = {}
-        for repo in repos_data[:10]: # Check top 10 repos
+        for repo in repos_data_no_forks[:10]: # Check top 10 non-fork repos
             lang = repo.get("language")
             if lang:
                 languages[lang] = languages.get(lang, 0) + 1
         
         top_langs = sorted(languages.items(), key=lambda x: x[1], reverse=True)[:5]
         
-        # Top repositories (sorted by stars by default)
+        # Top repositories - include ALL repos (user can filter in UI if needed)
         top_repos = [{
             "name": repo.get("name", ""),
             "description": repo.get("description", ""),
             "language": repo.get("language", ""),
             "stars": repo.get("stargazers_count", 0),
             "forks": repo.get("forks_count", 0),
-            "updated_at": repo.get("updated_at", "")
-        } for repo in sorted(repos_data, key=lambda x: x.get("stargazers_count", 0), reverse=True)[:10]]
+            "updated_at": repo.get("updated_at", ""),
+            "is_fork": repo.get("fork", False)
+        } for repo in sorted(all_repos, key=lambda x: x.get("stargazers_count", 0), reverse=True)[:10]]
         
-        print(f"Fetched {len(repos_data)} repos for {username}, top_repos count: {len(top_repos)}")
+        print(f"Fetched {len(all_repos)} total repos ({len(repos_data_no_forks)} non-forks) for {username}, top_repos count: {len(top_repos)}")
 
         # Ensure total_commits is always an integer
         total_commits = 0 
