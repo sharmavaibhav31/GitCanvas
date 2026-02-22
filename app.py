@@ -98,7 +98,7 @@ with st.sidebar:
 
 # Data Loading
 @st.cache_data(ttl=3600)  # Cache for 1 hour
-def load_data(user, token=None):
+def load_data(user, token=None, _cache_version="v2"):  # Added version to force cache invalidation
     d = github_api.get_live_github_data(user, token)
     if not d:
         st.warning("Using mock data (API limits).")
