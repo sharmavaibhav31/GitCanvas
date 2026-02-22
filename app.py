@@ -4,7 +4,7 @@ import os
 import streamlit.components.v1 as components
 from dotenv import load_dotenv
 from roast_widget_streamlit import render_roast_widget
-from generators import stats_card, lang_card, contrib_card, badge_generator, recent_activity_card, streak_card
+from generators import stats_card, lang_card, contrib_card, badge_generator, recent_activity_card, streak_card, repo_card
 from utils import github_api
 from themes.styles import THEMES
 from generators.visual_elements import (
@@ -112,7 +112,7 @@ if custom_colors:
     current_theme_opts.update(custom_colors)
 
 # --- Layout: Tabs ---
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(["Main Stats", "Languages", "Contributions", "🔥 GitHub Streak", "Icons & Badges", "🔥 AI Roast", "Recent Activity", "✨ Visual Elements"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs(["Main Stats", "Languages", "Top Repositories", "Contributions", "🔥 GitHub Streak", "Icons & Badges", "🔥 AI Roast", "Recent Activity", "✨ Visual Elements"])
 
 def show_code_area(code_content, label="Markdown Code"):
     st.markdown(f"**{label}** (Copy below)")
@@ -219,6 +219,21 @@ with tab2:
     render_tab(svg_bytes, "languages", username, selected_theme, custom_colors, code_template="![Top Langs]({url})", excluded_languages=excluded_languages_str)
 
 with tab3:
+    st.subheader("Top Repositories")
+    
+    # Sorting options
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        sort_by = st.selectbox("Sort by:", ["stars", "forks", "updated"], index=0, 
+                              format_func=lambda x: {"stars": "⭐ Most Starred", "forks": "🔱 Most Forked", "updated": "🕐 Recently Updated"}[x])
+    with col2:
+        repo_limit = st.slider("Number of repos:", min_value=3, max_value=10, value=5)
+    
+    # Generate card - Pass selected_theme string
+    svg_bytes = repo_card.draw_repo_card(data, selected_theme, custom_colors, sort_by=sort_by, limit=repo_limit)
+    render_tab(svg_bytes, "repos", username, selected_theme, custom_colors, code_template="![Top Repos]({url})")
+
+with tab4:
     st.subheader("Contribution Graph")
     st.caption(f"Theme: **{selected_theme}**")
     if selected_theme == "Gaming": st.caption("🐍 Snake Mode: The snake grows as it eats commits.")
@@ -231,14 +246,14 @@ with tab3:
     svg_bytes = contrib_card.draw_contrib_card(data, selected_theme, custom_colors)
     render_tab(svg_bytes, "contributions", username, selected_theme, custom_colors, code_template="![Contributions]({url})")
 
-with tab4:
+with tab5:
     st.subheader("GitHub Streak")
     st.caption("🔥 Track your contribution streaks! Shows current consecutive days and your all-time longest streak.")
     
     svg_bytes = streak_card.draw_streak_card(data, selected_theme, custom_colors)
     render_tab(svg_bytes, "streak", username, selected_theme, custom_colors, code_template="![GitHub Streak]({url})")
 
-with tab5:
+with tab6:
     st.subheader("Tech Stack Badges")
     st.markdown("Click detailed settings to customize. Copy the code block to your README.")
     
@@ -307,8 +322,8 @@ with tab5:
             st.markdown("---")
             show_code_area(md_output, label="Badge Code")
 
-# NEW TAB 6: AI ROAST
-with tab6:
+# NEW TAB 7: AI ROAST
+with tab7:
     st.subheader("🔥 AI Profile Roast")
 
     st.markdown("Let AI roast your GitHub profile with humor!")
@@ -318,7 +333,7 @@ with tab6:
     else:
         st.warning("Please enter a GitHub username in the sidebar.")
 
-with tab7:
+with tab8:
     st.subheader("Recent Activity")
     st.markdown("Shows your last 3 PR or Issue events from GitHub.")
 
@@ -351,7 +366,7 @@ with tab7:
         code = f"![Recent Activity]({url})"
         show_code_area(code)
 
-with tab8:
+with tab9:
     st.subheader("✨ Visual Elements")
     st.markdown("Add emojis, GIFs, or stickers to your canvas")
 

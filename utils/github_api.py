@@ -134,6 +134,15 @@ def get_live_github_data(username, token=None):
         
         top_langs = sorted(languages.items(), key=lambda x: x[1], reverse=True)[:5]
         
+        # Top repositories (sorted by stars by default)
+        top_repos = [{
+            "name": repo.get("name", ""),
+            "description": repo.get("description", ""),
+            "language": repo.get("language", ""),
+            "stars": repo.get("stargazers_count", 0),
+            "forks": repo.get("forks_count", 0),
+            "updated_at": repo.get("updated_at", "")
+        } for repo in sorted(repos_data, key=lambda x: x.get("stargazers_count", 0), reverse=True)[:10]]
 
         # Ensure total_commits is always an integer
         total_commits = 0 
@@ -158,6 +167,7 @@ def get_live_github_data(username, token=None):
             "public_repos": user_data.get("public_repos", 0),
             "followers": user_data.get("followers", 0),
             "top_languages": top_langs,
+            "top_repos": top_repos,
         }
 
         # --- Optional GraphQL enrichment ---
@@ -194,6 +204,13 @@ def get_mock_data(username):
         "contributions":[ 
             {"date": f"2025-01-{i+1:02d}", "count": (i * 3) % 10}
             for i in range(80)
+        ],
+        "top_repos": [
+            {"name": "awesome-project", "description": "A cool project", "language": "Python", "stars": 150, "forks": 30, "updated_at": "2025-01-15"},
+            {"name": "web-app", "description": "Modern web application", "language": "JavaScript", "stars": 89, "forks": 12, "updated_at": "2025-01-20"},
+            {"name": "api-service", "description": "RESTful API service", "language": "Go", "stars": 65, "forks": 8, "updated_at": "2025-01-18"},
+            {"name": "cli-tool", "description": "Command line utility", "language": "Rust", "stars": 42, "forks": 5, "updated_at": "2025-01-10"},
+            {"name": "mobile-app", "description": "Cross-platform mobile app", "language": "TypeScript", "stars": 28, "forks": 3, "updated_at": "2025-01-12"}
         ]
 
     }
