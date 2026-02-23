@@ -184,6 +184,7 @@ def get_live_github_data(username, token=None):
             "total_commits": total_commits,
             "public_repos": user_data.get("public_repos", 0),
             "followers": user_data.get("followers", 0),
+            "created_at": user_data.get("created_at", ""),
             "top_languages": top_langs,
             "top_repos": top_repos,
         }
@@ -218,8 +219,9 @@ def get_mock_data(username):
         "total_commits": 450,
         "public_repos": 25,
         "followers": 85,
+        "created_at": "2015-06-15T00:00:00Z",
         "top_languages": [("Python", 10), ("JavaScript", 5), ("Rust", 2)],
-        "contributions":[ 
+        "contributions":[
             {"date": f"2025-01-{i+1:02d}", "count": (i * 3) % 10}
             for i in range(80)
         ],

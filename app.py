@@ -4,7 +4,7 @@ import os
 import streamlit.components.v1 as components
 from dotenv import load_dotenv
 from roast_widget_streamlit import render_roast_widget
-from generators import stats_card, lang_card, contrib_card, badge_generator, recent_activity_card, streak_card, repo_card
+from generators import stats_card, lang_card, contrib_card, badge_generator, recent_activity_card, streak_card, repo_card, trophy_card
 from utils import github_api
 from themes.styles import THEMES, CUSTOM_THEMES, save_custom_theme, load_custom_themes, get_all_themes
 
@@ -193,7 +193,7 @@ if custom_colors:
 
 
 # --- Layout: Tabs ---
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs(["Main Stats", "Languages", "Top Repositories", "Contributions", "🔥 GitHub Streak", "Icons & Badges", "🔥 AI Roast", "Recent Activity", "✨ Visual Elements"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs(["Main Stats", "Languages", "Top Repositories", "Contributions", "🔥 GitHub Streak", "Icons & Badges", "🔥 AI Roast", "Recent Activity", "✨ Visual Elements", "🏆 GitHub Trophy"])
 
 def show_code_area(code_content, label="Markdown Code"):
     st.markdown(f"**{label}** (Copy below)")
@@ -477,3 +477,18 @@ with tab9:
             svg = sticker_element(value)
 
         st.session_state["canvas"].append(svg)
+
+# NEW TAB 10: Trophy Card
+with tab10:
+    st.subheader("🏆 GitHub Trophy")
+    st.markdown("Display your achievements including stars, forks, followers, and repository quality tier!")
+    
+    # Get created_at from GitHub API data if available
+    trophy_data = data.copy()
+    # Try to get created_at from user data if available
+    if "created_at" not in trophy_data:
+        # Add a default for testing
+        trophy_data["created_at"] = "2010-01-01T00:00:00Z"
+    
+    svg_bytes = trophy_card.draw_trophy_card(trophy_data, selected_theme, custom_colors)
+    render_tab(svg_bytes, "trophy", username, selected_theme, custom_colors, code_template="![GitHub Trophy]({url})")
