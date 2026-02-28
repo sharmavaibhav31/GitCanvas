@@ -72,7 +72,10 @@ def draw_stats_card(data, theme_name="Default", show_options=None, custom_colors
     visible_items = sum(1 for k, v in show_options.items() if v)
     height = base_height + (visible_items * item_height) + 10
     
-    dwg = svgwrite.Drawing(size=("100%", "100%"), viewBox=f"0 0 {width} {height}")
+    # Create SVG without strict validation for custom attributes
+    dwg = svgwrite.Drawing(size=("100%", "100%"), viewBox=f"0 0 {width} {height}", debug=False)
+    # Disable validator to allow custom attributes
+    dwg.validator = None
     
     # Add CSS animations if enabled
     if animations_enabled:

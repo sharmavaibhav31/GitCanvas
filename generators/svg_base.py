@@ -172,7 +172,8 @@ def create_svg_base(theme_name, custom_colors, width, height, title_text, animat
     if custom_colors:
         theme.update(custom_colors)
     
-    dwg = svgwrite.Drawing(size=(f"{width}px", f"{height}px"))
+    dwg = svgwrite.Drawing(size=(f"{width}px", f"{height}px"), debug=False)
+    dwg.validator = None  # Disable validator for custom attributes
     
     # Add CSS animations if enabled
     if animations_enabled:

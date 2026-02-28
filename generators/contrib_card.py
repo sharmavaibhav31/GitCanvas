@@ -209,7 +209,8 @@ def draw_contrib_card(data, theme_name="Default", custom_colors=None, date_range
     if original_theme_name == "Gaming":
         width = 560
         height = 180
-    dwg = svgwrite.Drawing(size=("100%", "100%"), viewBox=f"0 0 {width} {height}")
+    dwg = svgwrite.Drawing(size=("100%", "100%"), viewBox=f"0 0 {width} {height}", debug=False)
+    dwg.validator = None  # Disable validator for custom attributes
     
     # Background
     dwg.add(dwg.rect(insert=(0, 0), size=("100%", "100%"), rx=10, ry=10, 
