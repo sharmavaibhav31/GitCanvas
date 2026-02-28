@@ -98,11 +98,22 @@ async def get_contributions(
     bg_color: Optional[str] = None,
     title_color: Optional[str] = None,
     text_color: Optional[str] = None,
-    border_color: Optional[str] = None
+    border_color: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
 ):
     data = github_api.get_live_github_data(username) or github_api.get_mock_data(username)
     custom_colors = parse_colors(bg_color, title_color, text_color, border_color)
-    svg_content = contrib_card.draw_contrib_card(data, theme, custom_colors=custom_colors)
+    
+    # Build date_range dict if dates are provided
+    date_range = None
+    if start_date and end_date:
+        date_range = {
+            'start': start_date,
+            'end': end_date
+        }
+    
+    svg_content = contrib_card.draw_contrib_card(data, theme, custom_colors=custom_colors, date_range=date_range)
     return svg_response(svg_content , request)
 
 
