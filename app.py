@@ -4,7 +4,7 @@ import os
 import streamlit.components.v1 as components
 from dotenv import load_dotenv
 from roast_widget_streamlit import render_roast_widget
-from generators import stats_card, lang_card, contrib_card, badge_generator, recent_activity_card, streak_card, repo_card, social_card
+from generators import stats_card, lang_card, contrib_card, badge_generator, recent_activity_card, streak_card, repo_card, social_card, trophy_card
 from utils import github_api
 from themes.styles import THEMES, get_all_themes, CUSTOM_THEMES
 from generators.visual_elements import (
@@ -142,12 +142,27 @@ def load_data(user, token=None, _cache_version="v2"):  # Added version to force 
     if not d:
         st.warning("Using mock data (API limits).")
         d = github_api.get_mock_data(user)
+    return d
 
 data = load_data(username if username else "torvalds", github_token if github_token else None)
+
+# Ensure data is not None
+if data is None:
+    data = {}
 
 # Ensure backward compatibility with old cached data
 if "top_repos" not in data:
     data["top_repos"] = []
+
+# Initialize other missing fields with defaults
+data.setdefault("username", username if username else "torvalds")
+data.setdefault("total_stars", 0)
+data.setdefault("total_commits", 0)
+data.setdefault("public_repos", 0)
+data.setdefault("followers", 0)
+data.setdefault("created_at", "")
+data.setdefault("top_languages", [])
+data.setdefault("contributions", [])
 
 # Apply custom colors to current theme for python logic
 current_theme_opts = all_themes.get(selected_theme, all_themes["Default"]).copy()
@@ -156,7 +171,7 @@ if custom_colors:
 
 
 # --- Layout: Tabs ---
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs(["Main Stats", "Languages", "Top Repositories", "Contributions", "🔥 GitHub Streak", "🔗 Social Links", "Icons & Badges", "🔥 AI Roast", "Recent Activity", "✨ Visual Elements"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs(["Main Stats", "Languages", "Top Repositories", "Contributions", "🔥 GitHub Streak", "🔗 Social Links", "Icons & Badges", "🔥 AI Roast", "Recent Activity", "✨ Visual Elements", "🏆 Trophy"])
 
 def show_code_area(code_content, label="Markdown Code"):
     st.markdown(f"**{label}** (Copy below)")
@@ -486,8 +501,8 @@ with tab10:
 
         st.session_state["canvas"].append(svg)
 
-# NEW TAB 10: Trophy Card
-with tab10:
+# TAB 11: Trophy Card
+with tab11:
     st.subheader("🏆 GitHub Trophy")
     st.markdown("Display your achievements including stars, forks, followers, and repository quality tier!")
     
