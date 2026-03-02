@@ -135,9 +135,6 @@ def get_live_github_data(username, token=None):
         # For stats calculation, filter out forks
         repos_data_no_forks = [repo for repo in repos_data if not repo.get("fork", False)]
         
-        # For stats calculation, filter out forks
-        repos_data_no_forks = [repo for repo in repos_data if not repo.get("fork", False)]
-        
         total_stars = sum(repo.get("stargazers_count", 0) for repo in repos_data_no_forks)
         
         # Languages (Approximation from top repos, excluding forks)
