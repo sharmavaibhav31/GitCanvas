@@ -1,9 +1,12 @@
 ﻿import math
 import svgwrite
 import random
+import logging
 from themes.styles import THEMES
 from datetime import date, datetime, timedelta
 from .svg_base import CSS_ANIMATIONS
+
+logger = logging.getLogger(__name__)
 
 
 def _levels_from_cells(cells, max_count):
@@ -68,11 +71,13 @@ def _weeks_from_dates(contributions, cols, rows):
     date_counts = {}
     for item in contributions:
         item_date = item.get("date")
-        if not item_date:
+        # Explicit type checking and validation
+        if not isinstance(item_date, str) or not item_date.strip():
             continue
         try:
             parsed = date.fromisoformat(item_date)
-        except Exception:
+        except ValueError:
+            logger.warning(f"Invalid date format: {item_date}")
             continue
         date_counts[parsed] = item.get("count", 0)
 

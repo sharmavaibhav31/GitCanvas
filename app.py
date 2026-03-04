@@ -94,8 +94,25 @@ with st.sidebar:
             custom_bg = get_col("bg_color")
         
         custom_title = st.color_picker("Title Text", value=get_col("title_color"), key=f"customize_title_{selected_theme}")
+        
+        # Validate title color format
+        if not HEX_COLOR_REGEX.match(custom_title):
+            st.error("Invalid title color format")
+            custom_title = get_col("title_color")
+        
         custom_text = st.color_picker("Body Text", value=get_col("text_color"), key=f"customize_text_{selected_theme}")
+        
+        # Validate text color format
+        if not HEX_COLOR_REGEX.match(custom_text):
+            st.error("Invalid text color format")
+            custom_text = get_col("text_color")
+        
         custom_border = st.color_picker("Border", value=get_col("border_color"), key=f"customize_border_{selected_theme}")
+        
+        # Validate border color format
+        if not HEX_COLOR_REGEX.match(custom_border):
+            st.error("Invalid border color format")
+            custom_border = get_col("border_color")
         
         # Build custom colors dict if changed
         custom_colors = {}
