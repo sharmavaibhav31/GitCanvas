@@ -86,6 +86,9 @@ def draw_stats_card(data, theme_name="Default", show_options=None, custom_colors
     
     dwg = svgwrite.Drawing(size=("100%", "100%"), viewBox=f"0 0 {width} {height}")
     
+    # Validate username to prevent KeyError
+    username = data.get('username', 'Unknown')
+    
     # Add CSS animations if enabled (basic support only)
     # Note: Advanced animation features disabled due to svgwrite validation constraints
     
@@ -252,8 +255,6 @@ def draw_stats_card(data, theme_name="Default", show_options=None, custom_colors
         dwg.add(dwg.rect(insert=(margin + 4, margin + 4), size=(p_width - 8, p_height / 4), rx=12, ry=12, fill="url(#reflGrad)"))
 
         # 3. Content Title
-        # Validate username to prevent KeyError
-        username = data.get('username', 'Unknown')
         title_text = f"{username}'s Stats".upper()
         # Dynamic font size for title
         base_f = 16
