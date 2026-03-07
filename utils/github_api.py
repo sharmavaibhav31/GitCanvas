@@ -2,12 +2,12 @@ import requests
 import os
 import logging
 
-logger = logging.getLogger(__name__)
-
 try:
     from dotenv import load_dotenv
 except Exception:
     load_dotenv = None
+
+logger = logging.getLogger(__name__)
 
 GITHUB_GRAPHQL_URL = "https://api.github.com/graphql"
 
@@ -139,9 +139,6 @@ def get_live_github_data(username, token=None):
         
         # Store all repos including forks for frontend (let user decide)
         all_repos = repos_data.copy()
-        
-        # For stats calculation, filter out forks
-        repos_data_no_forks = [repo for repo in repos_data if not repo.get("fork", False)]
         
         # For stats calculation, filter out forks
         repos_data_no_forks = [repo for repo in repos_data if not repo.get("fork", False)]

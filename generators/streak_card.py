@@ -15,7 +15,9 @@ def draw_streak_card(data, theme_name="Default", custom_colors=None):
     current_streak = streak_data.get('current_streak', 0)
     longest_streak = streak_data.get('longest_streak', 0)
     
-    dwg, theme = create_svg_base(theme_name, custom_colors, width, height, f"{data['username']}'s GitHub Streak")
+    # Validate username to prevent KeyError
+    username = data.get('username', 'Unknown')
+    dwg, theme = create_svg_base(theme_name, custom_colors, width, height, f"{username}'s GitHub Streak")
     
     font_family = theme["font_family"]
     text_color = theme["text_color"]

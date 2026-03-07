@@ -1,6 +1,6 @@
 import hashlib
 from fastapi import FastAPI, Response, Query, Request
-from generators import stats_card, lang_card, contrib_card, recent_activity_card, trophy_card
+from generators import stats_card, lang_card, contrib_card, recent_activity_card, trophy_card, streak_card, repo_card
 from utils import github_api
 from typing import Optional
 
@@ -48,6 +48,7 @@ async def get_stats(
     hide_commits: bool = False,
     hide_repos: bool = False,
     hide_followers: bool = False,
+    animations_enabled: bool = True,
     bg_color: Optional[str] = None,
     title_color: Optional[str] = None,
     text_color: Optional[str] = None,
@@ -74,6 +75,7 @@ async def get_languages(
     username: str,
     theme: str = "Default",
     exclude: Optional[str] = None,
+    excluded_languages: Optional[str] = None,
     bg_color: Optional[str] = None,
     title_color: Optional[str] = None,
     text_color: Optional[str] = None,
@@ -83,11 +85,13 @@ async def get_languages(
     custom_colors = parse_colors(bg_color, title_color, text_color, border_color)
     
     # Parse exclude parameter into list of languages
-    excluded_languages = []
-    if exclude:
-        excluded_languages = [lang.strip() for lang in exclude.split(',') if lang.strip()]
+    excluded_languages_list = []
+    # Support both 'exclude' and 'excluded_languages' parameters
+    param_value = exclude or excluded_languages
+    if param_value:
+        excluded_languages_list = [lang.strip() for lang in param_value.split(',') if lang.strip()]
     
-    svg_content = lang_card.draw_lang_card(data, theme, custom_colors=custom_colors, excluded_languages=excluded_languages)
+    svg_content = lang_card.draw_lang_card(data, theme, custom_colors=custom_colors, excluded_languages=excluded_languages_list)
     return svg_response(svg_content , request)
 
 
@@ -96,6 +100,8 @@ async def get_contributions(
     request: Request,
     username: str,
     theme: str = "Default",
+    animations_enabled: bool = True,
+    date_range: Optional[str] = None,
     bg_color: Optional[str] = None,
     title_color: Optional[str] = None,
     text_color: Optional[str] = None,
@@ -153,4 +159,38 @@ async def get_trophy(
     data = github_api.get_live_github_data(username) or github_api.get_mock_data(username)
     custom_colors = parse_colors(bg_color, title_color, text_color, border_color)
     svg_content = trophy_card.draw_trophy_card(data, theme, custom_colors=custom_colors)
+    return svg_response(svg_content, request)
+
+
+@app.get("/api/streak")
+async def get_streak(
+    request: Request,
+    username: str,
+    theme: str = "Default",
+    bg_color: Optional[str] = None,
+    title_color: Optional[str] = None,
+    text_color: Optional[str] = None,
+    border_color: Optional[str] = None
+):
+    data = github_api.get_live_github_data(username) or github_api.get_mock_data(username)
+    custom_colors = parse_colors(bg_color, title_color, text_color, border_color)
+    svg_content = streak_card.draw_streak_card(data, theme, custom_colors=custom_colors)
+    return svg_response(svg_content, request)
+
+
+@app.get("/api/repos")
+async def get_repos(
+    request: Request,
+    username: str,
+    theme: str = "Default",
+    sort_by: str = "stars",
+    limit: int = 5,
+    bg_color: Optional[str] = None,
+    title_color: Optional[str] = None,
+    text_color: Optional[str] = None,
+    border_color: Optional[str] = None
+):
+    data = github_api.get_live_github_data(username) or github_api.get_mock_data(username)
+    custom_colors = parse_colors(bg_color, title_color, text_color, border_color)
+    svg_content = repo_card.draw_repo_card(data, theme, custom_colors=custom_colors, sort_by=sort_by, limit=limit)
     return svg_response(svg_content, request)
