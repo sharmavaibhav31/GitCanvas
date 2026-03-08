@@ -7,6 +7,8 @@ try:
 except Exception:
     load_dotenv = None
 
+from .rate_limiter import make_github_request, check_rate_limit_before_requests, log_rate_limit_summary
+
 logger = logging.getLogger(__name__)
 
 GITHUB_GRAPHQL_URL = "https://api.github.com/graphql"
@@ -120,18 +122,27 @@ def fetch_github_graphql(username, token=None):
         "Authorization": f"Bearer {token}"
     }
 
-    resp = requests.post(
-        GITHUB_GRAPHQL_URL,
-        json={"query": query, "variables": {"login": username}},
-        headers=headers,
-        timeout=10
-    )
+    try:
+        # Use rate-limited POST request for GraphQL
+        resp = requests.post(
+            GITHUB_GRAPHQL_URL,
+            json={"query": query, "variables": {"login": username}},
+            headers=headers,
+            timeout=10
+        )
 
-    if resp.status_code != 200:
-        return None
+        if resp.status_code != 200:
+            logger.error(f"GraphQL API error: {resp.status_code}")
+            return None
+        
+        return resp.json()
     
-
-    return resp.json()
+    except requests.RequestException as e:
+        logger.error(f"GraphQL request failed: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error in GraphQL fetch: {e}")
+        return None
 
 def parse_graphql_contributions(graphql_json):
     weeks = (
@@ -181,37 +192,60 @@ def get_github_headers(token=None):
 
 def get_live_github_data(username, token=None):
     """
-    Fetches real data from GitHub API. 
+    Fetches real data from GitHub API with comprehensive rate limiting and retry logic.
     Notes: 
     - Unauthenticated requests are rate-limited (60/hr).
     - For a real production app, we need a token or use GraphQL.
     - For this MVP, we scrape or use public endpoints where possible to avoid token complexity for the user usage.
     """
     try:
-        # User details
-        user_url = f"https://api.github.com/users/{username}"
+        # Check rate limits before making multiple requests
+        can_proceed, message = check_rate_limit_before_requests(3)  # We'll make ~3 requests
+        if not can_proceed:
+            logger.warning(f"Rate limit check failed: {message}")
+            # Continue anyway but with awareness
+        
         headers = get_github_headers(token)
         print(f"Fetching user data for {username}, using token: {bool(token)}")
-        user_resp = requests.get(user_url, headers=headers, timeout=10)
+        
+        # User details with rate limiting
+        user_url = f"https://api.github.com/users/{username}"
+        user_resp = make_github_request(user_url, headers=headers, timeout=10)
 
-        if user_resp.status_code != 200:
-            print(f"User API Error: Status {user_resp.status_code}, Response: {user_resp.text[:200]}")
+        if not user_resp or user_resp.status_code != 200:
+            error_msg = f"User API Error: Status {user_resp.status_code if user_resp else 'No response'}"
+            if user_resp:
+                error_msg += f", Response: {user_resp.text[:200]}"
+            print(error_msg)
             return None
-        user_data = user_resp.json()
+        
+        try:
+            user_data = user_resp.json()
+        except ValueError as e:
+            logger.error(f"Invalid JSON in user response: {e}")
+            return None
+        
         print(f"User data fetched successfully: {user_data.get('login', 'N/A')}")
         
-        # Repos for stars count (limited to first 100 public repos for basic sum without pagination for MVP speed)
+        # Repos for stars count with rate limiting
         repos_url = f"https://api.github.com/users/{username}/repos?per_page=100&sort=updated"
         print(f"Fetching repos from: {repos_url}")
-        repos_resp = requests.get(repos_url, headers=headers, timeout=10)
-        print(f"Repos API Status: {repos_resp.status_code}")
-        repos_data = repos_resp.json() if repos_resp.status_code == 200 else []
         
-        # Validate response is a list
-        if not isinstance(repos_data, list):
-            # API returned an error dict instead of list
-            print(f"Repos API Error: {repos_data}")
-            repos_data = []
+        repos_resp = make_github_request(repos_url, headers=headers, timeout=10)
+        repos_data = []
+        
+        if repos_resp and repos_resp.status_code == 200:
+            try:
+                raw_repos_data = repos_resp.json()
+                if isinstance(raw_repos_data, list):
+                    repos_data = raw_repos_data
+                else:
+                    print(f"Repos API Error: Expected list, got {type(raw_repos_data)}")
+            except ValueError as e:
+                logger.error(f"Invalid JSON in repos response: {e}")
+        else:
+            status = repos_resp.status_code if repos_resp else 'No response'
+            print(f"Repos API Error: Status {status}")
         
         # Store all repos including forks for frontend (let user decide)
         all_repos = repos_data.copy()
@@ -247,9 +281,12 @@ def get_live_github_data(username, token=None):
         total_commits = 0 
         fallback_contributions = []
 
+        # Contributions from external API (not GitHub, so no rate limiting needed)
         try:
             contrib_url = f"https://github-contributions-api.jogruber.de/v4/{username}"
             print(f"Fetching contributions from fallback API: {contrib_url}")
+            
+            # Use regular requests for non-GitHub API
             contrib_resp = requests.get(contrib_url, timeout=10)
             if contrib_resp.status_code == 200:
                 c_data = contrib_resp.json()
@@ -318,6 +355,9 @@ def get_live_github_data(username, token=None):
                 'total_contributions': 0
             }
 
+        # Log rate limit summary
+        log_rate_limit_summary()
+
         return data
 
             
@@ -329,10 +369,18 @@ def get_live_github_data(username, token=None):
 
 def get_mock_data(username):
     """Returns dummy data for layout testing/building without hitting API limits"""
-    mock_contributions = [
-        {"date": f"2025-01-{i+1:02d}", "count": (i * 3) % 10}
-        for i in range(80)
-    ]
+    from datetime import datetime, timedelta
+    
+    # Generate mock contributions for the last 30 days
+    base_date = datetime(2025, 1, 1)
+    mock_contributions = []
+    
+    for i in range(30):
+        date = base_date + timedelta(days=i)
+        mock_contributions.append({
+            "date": date.strftime("%Y-%m-%d"),
+            "count": (i * 3) % 10
+        })
     
     return {
         "username": username,

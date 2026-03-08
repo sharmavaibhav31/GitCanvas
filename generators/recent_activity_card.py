@@ -1,6 +1,10 @@
 import svgwrite
 import requests
 from themes.styles import THEMES
+from utils.rate_limiter import make_github_request, get_rate_limit_status
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def draw_recent_activity_card(data, theme_name="Default", custom_colors=None, token=None):
@@ -37,27 +41,55 @@ def draw_recent_activity_card(data, theme_name="Default", custom_colors=None, to
         headers["Authorization"] = f"token {token}"
 
     url = f"https://api.github.com/users/{username}/events"
-    try:
-        resp = requests.get(url, headers=headers, timeout=8)
-    except Exception as e:
-        # Return an SVG with the error
-        return _render_svg_lines([f"Error fetching events: {e}"], theme)
+    
+    # Check rate limit status before making request
+    rate_limit = get_rate_limit_status()
+    if rate_limit and rate_limit.should_wait(threshold=2):
+        wait_time = rate_limit.time_until_reset()
+        if wait_time > 60:  # Don't wait more than 1 minute for activity card
+            logger.warning(f"Rate limit low, skipping recent activity (would wait {wait_time:.1f}s)")
+            return _render_svg_lines(["Rate limit reached - try again later"], theme)
+    
+    # Make rate-limited request
+    resp = make_github_request(url, headers=headers, timeout=8)
+    
+    if not resp:
+        logger.error("Failed to fetch events after retries")
+        return _render_svg_lines(["Error fetching recent activity"], theme)
 
     if resp.status_code != 200:
-        return _render_svg_lines([f"GitHub API error: {resp.status_code}"], theme)
+        logger.error(f"GitHub API error: {resp.status_code}")
+        if resp.status_code == 429:
+            return _render_svg_lines(["Rate limit reached - try again later"], theme)
+        else:
+            return _render_svg_lines([f"GitHub API error: {resp.status_code}"], theme)
 
-    events = resp.json()
+    try:
+        events = resp.json()
+    except ValueError as e:
+        logger.error(f"Invalid JSON in events response: {e}")
+        return _render_svg_lines(["Error: Invalid response format"], theme)
+
+    if not isinstance(events, list):
+        logger.error(f"Expected list of events, got {type(events)}")
+        return _render_svg_lines(["Error: Unexpected response format"], theme)
 
     lines = []
     for ev in events:
-        if ev.get('type') == 'PullRequestEvent':
+        if not isinstance(ev, dict):
+            continue
+            
+        event_type = ev.get('type', '')
+        
+        if event_type == 'PullRequestEvent':
             payload = ev.get('payload', {})
-            action = payload.get('action')
+            action = payload.get('action', '')
             pr = payload.get('pull_request', {})
-            number = pr.get('number')
-            title = pr.get('title') or ''
-            repo = ev.get('repo', {}).get('name', '')
-            merged = pr.get('merged')
+            number = pr.get('number', 0)
+            title = pr.get('title', '')[:100]  # Truncate long titles
+            repo_data = ev.get('repo', {})
+            repo = repo_data.get('name', '')[:50]  # Truncate long repo names
+            merged = pr.get('merged', False)
 
             if merged:
                 lines.append(f"Merged PR #{number} in {repo}: {title}")
@@ -69,13 +101,14 @@ def draw_recent_activity_card(data, theme_name="Default", custom_colors=None, to
                 else:
                     lines.append(f"PR #{number} {action} in {repo}: {title}")
 
-        elif ev.get('type') == 'IssuesEvent':
+        elif event_type == 'IssuesEvent':
             payload = ev.get('payload', {})
-            action = payload.get('action')
+            action = payload.get('action', '')
             issue = payload.get('issue', {})
-            number = issue.get('number')
-            title = issue.get('title') or ''
-            repo = ev.get('repo', {}).get('name', '')
+            number = issue.get('number', 0)
+            title = issue.get('title', '')[:100]  # Truncate long titles
+            repo_data = ev.get('repo', {})
+            repo = repo_data.get('name', '')[:50]  # Truncate long repo names
 
             if action == 'opened':
                 lines.append(f"Opened Issue #{number} in {repo}: {title}")
