@@ -1,6 +1,7 @@
 import requests
 import os
 import logging
+from .cache import cache_github_api
 
 try:
     from dotenv import load_dotenv
@@ -101,6 +102,7 @@ def calculate_streak_data(contributions):
     }
 
 
+@cache_github_api
 def fetch_github_graphql(username, token=None):
     if not token:
         token = os.getenv("GITHUB_TOKEN")
@@ -243,6 +245,7 @@ def get_github_headers(token=None):
 
     return headers
 
+@cache_github_api
 def get_live_github_data(username, token=None):
     """
     Fetches real data from GitHub API with comprehensive validation.

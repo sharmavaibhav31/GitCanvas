@@ -1,20 +1,31 @@
 import hashlib
 from fastapi import FastAPI, Response, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 from generators import stats_card, lang_card, contrib_card, recent_activity_card, trophy_card, streak_card, repo_card
 from utils import github_api
-from utils.validators import (
-    validate_username,
-    validate_theme,
-    validate_hex_color,
-    validate_sort_by,
-    validate_limit,
-    validate_date
-)
+from utils.cache import cache_svg_response, get_cache_stats, clear_cache
 from typing import Optional
 
 app = FastAPI()
 
+# Configure CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure appropriately for production
+    allow_methods=["GET", "DELETE"],  # Allow GET for API endpoints and DELETE for cache management
+    allow_headers=["*"],
+    allow_credentials=False,  # Set to True if you need to support credentials
+)
+
 # Implements HTTP conditional requests for CDN-safe SVG caching
+
+@cache_svg_response
+def generate_cached_svg(generator_func, *args, **kwargs):
+    """
+    Wrapper function to cache SVG generation results
+    """
+    return generator_func(*args, **kwargs)
+
 
 def svg_response(svg_content: str, request: Request):
     etag = hashlib.md5(svg_content.encode("utf-8")).hexdigest()
@@ -124,7 +135,7 @@ async def get_stats(
     }
     
     custom_colors = parse_colors(bg_color, title_color, text_color, border_color)
-    svg_content = stats_card.draw_stats_card(data, theme, show_options=show_options, custom_colors=custom_colors, animations_enabled=animations_enabled)
+    svg_content = generate_cached_svg(stats_card.draw_stats_card, data, theme, show_options=show_options, custom_colors=custom_colors, animations_enabled=animations_enabled)
     return svg_response(svg_content , request)
 
 
@@ -154,7 +165,7 @@ async def get_languages(
     if param_value:
         excluded_languages_list = [lang.strip() for lang in param_value.split(',') if lang.strip()]
     
-    svg_content = lang_card.draw_lang_card(data, theme, custom_colors=custom_colors, excluded_languages=excluded_languages_list)
+    svg_content = generate_cached_svg(lang_card.draw_lang_card, data, theme, custom_colors=custom_colors, excluded_languages=excluded_languages_list)
     return svg_response(svg_content , request)
 
 
@@ -189,7 +200,7 @@ async def get_contributions(
             'end': end_date
         }
     
-    svg_content = contrib_card.draw_contrib_card(data, theme, custom_colors=custom_colors, date_range=date_range, animations_enabled=animations_enabled)
+    svg_content = generate_cached_svg(contrib_card.draw_contrib_card, data, theme, custom_colors=custom_colors, date_range=date_range, animations_enabled=animations_enabled)
     return svg_response(svg_content , request)
 
 
@@ -278,3 +289,34 @@ async def get_repos(
     custom_colors = parse_colors(bg_color, title_color, text_color, border_color)
     svg_content = repo_card.draw_repo_card(data, theme, custom_colors=custom_colors, sort_by=sort_by, limit=limit)
     return svg_response(svg_content, request)
+
+# Cache management endpoints
+
+@app.get("/api/cache/stats")
+async def get_cache_statistics():
+    """
+    Get cache statistics including hit rates and cache sizes
+    """
+    return get_cache_stats()
+
+
+@app.delete("/api/cache/clear")
+async def clear_all_caches():
+    """
+    Clear all caches (GitHub API and SVG caches)
+    """
+    return clear_cache()
+
+
+@app.delete("/api/cache/clear/{cache_type}")
+async def clear_specific_cache(cache_type: str):
+    """
+    Clear specific cache type
+    
+    Args:
+        cache_type: 'github_api' or 'svg'
+    """
+    if cache_type not in ['github_api', 'svg']:
+        return {"error": "Invalid cache type. Use 'github_api' or 'svg'"}
+    
+    return clear_cache(cache_type)
